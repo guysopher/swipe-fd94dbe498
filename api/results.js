@@ -1,6 +1,11 @@
+function getKvCreds() {
+  const base = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  return { base, token };
+}
+
 export default async function handler(req, res) {
-  const base = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
+  const { base, token } = getKvCreds();
   if (!base || !token) {
     res.status(500).json({ error: 'KV not configured yet' });
     return;
