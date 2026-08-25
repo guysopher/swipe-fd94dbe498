@@ -59,26 +59,27 @@
   #startBtn:disabled { opacity: .5; }
 
   /* ---------- App ---------- */
-  #app { display: none; height: 100%; flex-direction: column; }
+  #app { display: none; position: relative; height: 100%; }
   .header {
-    background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 5;
+    background: transparent;
     color: #fff;
     padding: 14px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-shrink: 0;
   }
-  .header .voter { font-weight: 700; font-size: 15px; }
-  .header .progress { font-size: 13px; opacity: .85; }
+  .header .voter { font-weight: 700; font-size: 15px; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+  .header .progress { font-size: 13px; opacity: .85; text-shadow: 0 1px 4px rgba(0,0,0,.6); }
 
   .deck-area {
-    flex: 1;
-    position: relative;
+    position: absolute;
+    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 0;
   }
   .card {
     position: absolute;
@@ -113,7 +114,9 @@
   .badge.pass { left: 20px; color: var(--pass); border-color: var(--pass); transform: rotate(12deg); }
 
   .controls {
-    flex-shrink: 0;
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    z-index: 5;
     display: flex;
     align-items: center;
     justify-content: center;
