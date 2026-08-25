@@ -5,6 +5,8 @@ function getKvCreds() {
 }
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
   const { base, token } = getKvCreds();
   if (!base || !token) {
     res.status(500).json({ error: 'KV not configured yet' });
