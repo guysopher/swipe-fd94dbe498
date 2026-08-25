@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>איזה תמונות אתם הכי אוהבים?</title>
+<style>
+  :root {
+    --purple: #7c3aed;
+    --purple-dark: #5b21b6;
+    --bg: #f5f3fa;
+    --text: #1e1b2e;
+    --muted: #6b6580;
+    --like: #22c55e;
+    --pass: #ef4444;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ---------- Name gate ---------- */
+  #nameGate {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px;
+    background: linear-gradient(160deg, var(--purple), var(--purple-dark));
+    color: #fff;
+    padding: 24px;
+    text-align: center;
+  }
+  #nameGate h1 { font-size: 26px; margin: 0 0 4px; }
+  #nameGate p { margin: 0; opacity: .85; font-size: 15px; max-width: 320px; }
+  #nameInput {
+    width: min(280px, 80vw);
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    text-align: center;
+  }
+  #startBtn {
+    padding: 14px 32px;
+    border-radius: 12px;
+    border: none;
+    background: #fff;
+    color: var(--purple-dark);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  #startBtn:disabled { opacity: .5; }
+
+  /* ---------- App ---------- */
+  #app { display: none; height: 100%; flex-direction: column; }
+  .header {
+    background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header .voter { font-weight: 700; font-size: 15px; }
+  .header .progress { font-size: 13px; opacity: .85; }
+
+  .deck-area {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    min-height: 0;
+  }
+  .card {
+    position: absolute;
+    width: min(94vw, 460px);
+    height: min(78vh, 640px);
+    background: #000;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(30,20,50,.25);
+    touch-action: pan-y;
+    cursor: grab;
+    will-change: transform;
+  }
+  .card img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  .badge {
+    position: absolute;
+    top: 28px;
+    padding: 8px 18px;
+    border: 3px solid;
+    border-radius: 10px;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    opacity: 0;
+    text-transform: uppercase;
+  }
+  .badge.like { right: 20px; color: var(--like); border-color: var(--like); transform: rotate(-12deg); }
+  .badge.pass { left: 20px; color: var(--pass); border-color: var(--pass); transform: rotate(12deg); }
+
+  .controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 18px 0 max(18px, env(safe-area-inset-bottom));
+  }
+  .controls button {
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(30,20,50,.18);
+  }
+  #passBtn, #likeBtn {
+    width: 64px; height: 64px;
+    font-size: 26px;
+    background: #fff;
+  }
+  #passBtn { color: var(--pass); }
+  #likeBtn { color: var(--like); }
+  #undoBtn {
+    width: 46px; height: 46px;
+    font-size: 18px;
+    background: #fff;
+    color: var(--muted);
+  }
+  .controls button:active { transform: scale(.92); }
+  .controls button:disabled { opacity: .35; }
+
+  /* ---------- Done screen ---------- */
+  #doneScreen {
+    display: none;
+    position: fixed; inset: 0;
+    background: linear-gradient(160deg, var(--purple), var(--purple-dark));
+    color: #fff;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px;
+    text-align: center;
+    padding: 24px;
+  }
+  #doneScreen h1 { font-size: 26px; margin: 0; }
+  #doneScreen p { margin: 0; opacity: .9; }
+  #doneScreen .stats { font-size: 15px; opacity: .85; }
+</style>
+</head>
+<body>
+
+<div id="nameGate">
+  <h1>איזה תמונות אתם הכי אוהבים?</h1>
+  <p>גלגלו את כל התמונות מהטיול — ימינה אם אהבתם, שמאלה אם לא. בסוף נבנה אלבום מכל התמונות שלפחות אחד מכם אהב.</p>
+  <input id="nameInput" placeholder="מה השם שלך?" maxlength="30" autocomplete="off">
+  <button id="startBtn" disabled>בואו נתחיל</button>
+</div>
+
+<div id="app">
+  <div class="header">
+    <span class="voter" id="voterLabel"></span>
+    <span class="progress" id="progressLabel"></span>
+  </div>
+  <div class="deck-area" id="deckArea">
+    <div class="card" id="card">
+      <img id="cardImg" alt="">
+      <div class="badge like" id="likeBadge">אהבתי</div>
+      <div class="badge pass" id="passBadge">דלג</div>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="passBtn" title="דלג">✕</button>
+    <button id="undoBtn" title="בטל">↺</button>
+    <button id="likeBtn" title="אהבתי">❤</button>
+  </div>
+</div>
+
+<div id="doneScreen">
+  <h1>סיימתם! 🎉</h1>
+  <p id="doneStats" class="stats"></p>
+  <p>תודה! אפשר לסגור את הדף עכשיו.</p>
+</div>
+
+<script>
+const IMAGE_BASE = 'https://guysopher.github.io/album-870ea898ec/thumbs/';
+const DECK = [{"idx": "0001", "w": 900, "h": 675}, {"idx": "0002", "w": 675, "h": 900}, {"idx": "0006", "w": 506, "h": 900}, {"idx": "0009", "w": 900, "h": 675}, {"idx": "0013", "w": 900, "h": 675}, {"idx": "0015", "w": 506, "h": 900}, {"idx": "0017", "w": 900, "h": 506}, {"idx": "0023", "w": 900, "h": 675}, {"idx": "0024", "w": 506, "h": 900}, {"idx": "0025", "w": 900, "h": 506}, {"idx": "0027", "w": 675, "h": 900}, {"idx": "0029", "w": 900, "h": 506}, {"idx": "0031", "w": 900, "h": 506}, {"idx": "0033", "w": 506, "h": 900}, {"idx": "0034", "w": 506, "h": 900}, {"idx": "0035", "w": 900, "h": 675}, {"idx": "0036", "w": 506, "h": 900}, {"idx": "0038", "w": 675, "h": 900}, {"idx": "0041", "w": 506, "h": 900}, {"idx": "0627", "w": 506, "h": 900}, {"idx": "0043", "w": 675, "h": 900}, {"idx": "0044", "w": 900, "h": 506}, {"idx": "0047", "w": 900, "h": 506}, {"idx": "0048", "w": 506, "h": 900}, {"idx": "0049", "w": 900, "h": 506}, {"idx": "0051", "w": 900, "h": 675}, {"idx": "0628", "w": 900, "h": 506}, {"idx": "0055", "w": 836, "h": 900}, {"idx": "0056", "w": 900, "h": 506}, {"idx": "0629", "w": 766, "h": 900}, {"idx": "0059", "w": 900, "h": 675}, {"idx": "0061", "w": 900, "h": 506}, {"idx": "0068", "w": 900, "h": 506}, {"idx": "0630", "w": 900, "h": 506}, {"idx": "0072", "w": 675, "h": 900}, {"idx": "0073", "w": 675, "h": 900}, {"idx": "0074", "w": 675, "h": 900}, {"idx": "0075", "w": 675, "h": 900}, {"idx": "0078", "w": 675, "h": 900}, {"idx": "0079", "w": 675, "h": 900}, {"idx": "0080", "w": 900, "h": 506}, {"idx": "0081", "w": 506, "h": 900}, {"idx": "0084", "w": 900, "h": 675}, {"idx": "0086", "w": 675, "h": 900}, {"idx": "0088", "w": 675, "h": 900}, {"idx": "0090", "w": 900, "h": 675}, {"idx": "0092", "w": 675, "h": 900}, {"idx": "0094", "w": 675, "h": 900}, {"idx": "0095", "w": 900, "h": 675}, {"idx": "0096", "w": 900, "h": 506}, {"idx": "0097", "w": 900, "h": 506}, {"idx": "0098", "w": 900, "h": 506}, {"idx": "0100", "w": 900, "h": 506}, {"idx": "0101", "w": 900, "h": 675}, {"idx": "0102", "w": 900, "h": 675}, {"idx": "0104", "w": 900, "h": 675}, {"idx": "0106", "w": 900, "h": 675}, {"idx": "0107", "w": 506, "h": 900}, {"idx": "0108", "w": 900, "h": 675}, {"idx": "0110", "w": 900, "h": 506}, {"idx": "0111", "w": 506, "h": 900}, {"idx": "0112", "w": 506, "h": 900}, {"idx": "0119", "w": 506, "h": 900}, {"idx": "0120", "w": 900, "h": 506}, {"idx": "0122", "w": 506, "h": 900}, {"idx": "0125", "w": 506, "h": 900}, {"idx": "0126", "w": 506, "h": 900}, {"idx": "0127", "w": 506, "h": 900}, {"idx": "0130", "w": 506, "h": 900}, {"idx": "0131", "w": 506, "h": 900}, {"idx": "0132", "w": 675, "h": 900}, {"idx": "0134", "w": 675, "h": 900}, {"idx": "0137", "w": 506, "h": 900}, {"idx": "0141", "w": 506, "h": 900}, {"idx": "0142", "w": 675, "h": 900}, {"idx": "0143", "w": 900, "h": 675}, {"idx": "0144", "w": 900, "h": 506}, {"idx": "0145", "w": 675, "h": 900}, {"idx": "0146", "w": 675, "h": 900}, {"idx": "0149", "w": 675, "h": 900}, {"idx": "0151", "w": 675, "h": 900}, {"idx": "0152", "w": 675, "h": 900}, {"idx": "0157", "w": 675, "h": 900}, {"idx": "0158", "w": 675, "h": 900}, {"idx": "0166", "w": 900, "h": 675}, {"idx": "0170", "w": 675, "h": 900}, {"idx": "0171", "w": 506, "h": 900}, {"idx": "0172", "w": 675, "h": 900}, {"idx": "0173", "w": 675, "h": 900}, {"idx": "0179", "w": 675, "h": 900}, {"idx": "0181", "w": 675, "h": 900}, {"idx": "0183", "w": 675, "h": 900}, {"idx": "0187", "w": 675, "h": 900}, {"idx": "0189", "w": 900, "h": 675}, {"idx": "0191", "w": 675, "h": 900}, {"idx": "0195", "w": 675, "h": 900}, {"idx": "0201", "w": 675, "h": 900}, {"idx": "0205", "w": 900, "h": 675}, {"idx": "0209", "w": 675, "h": 900}, {"idx": "0215", "w": 675, "h": 900}, {"idx": "0217", "w": 900, "h": 675}, {"idx": "0220", "w": 900, "h": 675}, {"idx": "0222", "w": 675, "h": 900}, {"idx": "0223", "w": 675, "h": 900}, {"idx": "0226", "w": 675, "h": 900}, {"idx": "0227", "w": 675, "h": 900}, {"idx": "0234", "w": 675, "h": 900}, {"idx": "0237", "w": 675, "h": 900}, {"idx": "0238", "w": 675, "h": 900}, {"idx": "0240", "w": 675, "h": 900}, {"idx": "0241", "w": 900, "h": 675}, {"idx": "0246", "w": 900, "h": 675}, {"idx": "0247", "w": 900, "h": 506}, {"idx": "0250", "w": 675, "h": 900}, {"idx": "0251", "w": 675, "h": 900}, {"idx": "0253", "w": 900, "h": 675}, {"idx": "0255", "w": 675, "h": 900}, {"idx": "0257", "w": 506, "h": 900}, {"idx": "0261", "w": 900, "h": 506}, {"idx": "0262", "w": 900, "h": 506}, {"idx": "0265", "w": 900, "h": 506}, {"idx": "0270", "w": 506, "h": 900}, {"idx": "0271", "w": 506, "h": 900}, {"idx": "0273", "w": 900, "h": 506}, {"idx": "0275", "w": 900, "h": 506}, {"idx": "0278", "w": 900, "h": 506}, {"idx": "0279", "w": 506, "h": 900}, {"idx": "0631", "w": 506, "h": 900}, {"idx": "0632", "w": 506, "h": 900}, {"idx": "0633", "w": 900, "h": 506}, {"idx": "0280", "w": 900, "h": 506}, {"idx": "0281", "w": 900, "h": 506}, {"idx": "0284", "w": 900, "h": 506}, {"idx": "0287", "w": 506, "h": 900}, {"idx": "0289", "w": 506, "h": 900}, {"idx": "0293", "w": 900, "h": 506}, {"idx": "0296", "w": 900, "h": 506}, {"idx": "0297", "w": 900, "h": 506}, {"idx": "0299", "w": 900, "h": 506}, {"idx": "0301", "w": 900, "h": 506}, {"idx": "0303", "w": 900, "h": 506}, {"idx": "0306", "w": 900, "h": 506}, {"idx": "0309", "w": 900, "h": 506}, {"idx": "0311", "w": 900, "h": 506}, {"idx": "0634", "w": 900, "h": 506}, {"idx": "0635", "w": 506, "h": 900}, {"idx": "0317", "w": 900, "h": 506}, {"idx": "0636", "w": 900, "h": 506}, {"idx": "0637", "w": 900, "h": 506}, {"idx": "0330", "w": 900, "h": 506}, {"idx": "0332", "w": 900, "h": 506}, {"idx": "0333", "w": 506, "h": 900}, {"idx": "0337", "w": 900, "h": 506}, {"idx": "0340", "w": 900, "h": 506}, {"idx": "0350", "w": 675, "h": 900}, {"idx": "0345", "w": 506, "h": 900}, {"idx": "0346", "w": 506, "h": 900}, {"idx": "0351", "w": 900, "h": 506}, {"idx": "0352", "w": 900, "h": 675}, {"idx": "0354", "w": 675, "h": 900}, {"idx": "0355", "w": 675, "h": 900}, {"idx": "0357", "w": 900, "h": 506}, {"idx": "0638", "w": 506, "h": 900}, {"idx": "0358", "w": 506, "h": 900}, {"idx": "0360", "w": 900, "h": 506}, {"idx": "0361", "w": 900, "h": 506}, {"idx": "0365", "w": 675, "h": 900}, {"idx": "0367", "w": 675, "h": 900}, {"idx": "0371", "w": 675, "h": 900}, {"idx": "0372", "w": 675, "h": 900}, {"idx": "0373", "w": 675, "h": 900}, {"idx": "0374", "w": 675, "h": 900}, {"idx": "0376", "w": 675, "h": 900}, {"idx": "0377", "w": 675, "h": 900}, {"idx": "0378", "w": 900, "h": 675}, {"idx": "0381", "w": 675, "h": 900}, {"idx": "0382", "w": 900, "h": 675}, {"idx": "0383", "w": 675, "h": 900}, {"idx": "0384", "w": 675, "h": 900}, {"idx": "0388", "w": 900, "h": 675}, {"idx": "0390", "w": 675, "h": 900}, {"idx": "0391", "w": 675, "h": 900}, {"idx": "0392", "w": 675, "h": 900}, {"idx": "0395", "w": 900, "h": 675}, {"idx": "0396", "w": 675, "h": 900}, {"idx": "0397", "w": 900, "h": 675}, {"idx": "0398", "w": 675, "h": 900}, {"idx": "0400", "w": 675, "h": 900}, {"idx": "0401", "w": 675, "h": 900}, {"idx": "0403", "w": 900, "h": 675}, {"idx": "0404", "w": 675, "h": 900}, {"idx": "0408", "w": 675, "h": 900}, {"idx": "0409", "w": 675, "h": 900}, {"idx": "0410", "w": 675, "h": 900}, {"idx": "0413", "w": 675, "h": 900}, {"idx": "0414", "w": 900, "h": 675}, {"idx": "0415", "w": 506, "h": 900}, {"idx": "0419", "w": 506, "h": 900}, {"idx": "0422", "w": 675, "h": 900}, {"idx": "0423", "w": 506, "h": 900}, {"idx": "0426", "w": 675, "h": 900}, {"idx": "0427", "w": 675, "h": 900}, {"idx": "0430", "w": 900, "h": 675}, {"idx": "0431", "w": 506, "h": 900}, {"idx": "0432", "w": 506, "h": 900}, {"idx": "0433", "w": 506, "h": 900}, {"idx": "0435", "w": 506, "h": 900}, {"idx": "0437", "w": 900, "h": 506}, {"idx": "0439", "w": 900, "h": 506}, {"idx": "0442", "w": 506, "h": 900}, {"idx": "0444", "w": 675, "h": 900}, {"idx": "0445", "w": 506, "h": 900}, {"idx": "0447", "w": 900, "h": 506}, {"idx": "0448", "w": 506, "h": 900}, {"idx": "0449", "w": 900, "h": 506}, {"idx": "0450", "w": 675, "h": 900}, {"idx": "0452", "w": 900, "h": 675}, {"idx": "0454", "w": 675, "h": 900}, {"idx": "0455", "w": 900, "h": 675}, {"idx": "0456", "w": 675, "h": 900}, {"idx": "0457", "w": 900, "h": 675}, {"idx": "0458", "w": 675, "h": 900}, {"idx": "0460", "w": 675, "h": 900}, {"idx": "0462", "w": 675, "h": 900}, {"idx": "0463", "w": 675, "h": 900}, {"idx": "0464", "w": 675, "h": 900}, {"idx": "0465", "w": 675, "h": 900}, {"idx": "0467", "w": 675, "h": 900}, {"idx": "0468", "w": 675, "h": 900}, {"idx": "0470", "w": 675, "h": 900}, {"idx": "0471", "w": 675, "h": 900}, {"idx": "0472", "w": 900, "h": 675}, {"idx": "0473", "w": 675, "h": 900}, {"idx": "0475", "w": 675, "h": 900}, {"idx": "0476", "w": 900, "h": 675}, {"idx": "0477", "w": 900, "h": 675}, {"idx": "0479", "w": 506, "h": 900}, {"idx": "0480", "w": 900, "h": 506}, {"idx": "0481", "w": 506, "h": 900}, {"idx": "0639", "w": 506, "h": 900}, {"idx": "0482", "w": 900, "h": 506}, {"idx": "0483", "w": 506, "h": 900}, {"idx": "0484", "w": 506, "h": 900}, {"idx": "0485", "w": 900, "h": 506}, {"idx": "0487", "w": 900, "h": 506}, {"idx": "0640", "w": 900, "h": 506}, {"idx": "0490", "w": 675, "h": 900}, {"idx": "0492", "w": 675, "h": 900}, {"idx": "0493", "w": 675, "h": 900}, {"idx": "0495", "w": 675, "h": 900}, {"idx": "0497", "w": 675, "h": 900}, {"idx": "0501", "w": 675, "h": 900}, {"idx": "0503", "w": 675, "h": 900}, {"idx": "0504", "w": 506, "h": 900}, {"idx": "0505", "w": 675, "h": 900}, {"idx": "0506", "w": 900, "h": 506}, {"idx": "0508", "w": 900, "h": 506}, {"idx": "0510", "w": 675, "h": 900}, {"idx": "0511", "w": 900, "h": 506}, {"idx": "0512", "w": 675, "h": 900}, {"idx": "0513", "w": 900, "h": 675}, {"idx": "0514", "w": 900, "h": 675}, {"idx": "0515", "w": 900, "h": 506}, {"idx": "0517", "w": 900, "h": 675}, {"idx": "0518", "w": 900, "h": 675}, {"idx": "0521", "w": 675, "h": 900}, {"idx": "0522", "w": 675, "h": 900}, {"idx": "0523", "w": 675, "h": 900}, {"idx": "0524", "w": 675, "h": 900}, {"idx": "0525", "w": 675, "h": 900}, {"idx": "0528", "w": 675, "h": 900}, {"idx": "0529", "w": 675, "h": 900}, {"idx": "0533", "w": 900, "h": 506}, {"idx": "0537", "w": 675, "h": 900}, {"idx": "0539", "w": 675, "h": 900}, {"idx": "0540", "w": 675, "h": 900}, {"idx": "0543", "w": 675, "h": 900}, {"idx": "0547", "w": 506, "h": 900}, {"idx": "0550", "w": 506, "h": 900}, {"idx": "0555", "w": 506, "h": 900}, {"idx": "0556", "w": 506, "h": 900}, {"idx": "0558", "w": 506, "h": 900}, {"idx": "0560", "w": 675, "h": 900}, {"idx": "0562", "w": 506, "h": 900}, {"idx": "0564", "w": 900, "h": 506}, {"idx": "0566", "w": 675, "h": 900}, {"idx": "0568", "w": 506, "h": 900}, {"idx": "0573", "w": 675, "h": 900}, {"idx": "0575", "w": 675, "h": 900}, {"idx": "0578", "w": 900, "h": 675}, {"idx": "0586", "w": 675, "h": 900}, {"idx": "0587", "w": 506, "h": 900}, {"idx": "0590", "w": 900, "h": 506}, {"idx": "0591", "w": 900, "h": 675}, {"idx": "0594", "w": 900, "h": 506}, {"idx": "0595", "w": 900, "h": 675}, {"idx": "0607", "w": 900, "h": 506}, {"idx": "0610", "w": 506, "h": 900}, {"idx": "0612", "w": 506, "h": 900}, {"idx": "0614", "w": 675, "h": 900}, {"idx": "0615", "w": 675, "h": 900}, {"idx": "0616", "w": 675, "h": 900}, {"idx": "0617", "w": 675, "h": 900}, {"idx": "0620", "w": 675, "h": 900}, {"idx": "0621", "w": 675, "h": 900}, {"idx": "0625", "w": 900, "h": 675}, {"idx": "0626", "w": 675, "h": 900}];
+
+const nameGate = document.getElementById('nameGate');
+const nameInput = document.getElementById('nameInput');
+const startBtn = document.getElementById('startBtn');
+const app = document.getElementById('app');
+const doneScreen = document.getElementById('doneScreen');
+const voterLabel = document.getElementById('voterLabel');
+const progressLabel = document.getElementById('progressLabel');
+const card = document.getElementById('card');
+const cardImg = document.getElementById('cardImg');
+const likeBadge = document.getElementById('likeBadge');
+const passBadge = document.getElementById('passBadge');
+const passBtn = document.getElementById('passBtn');
+const likeBtn = document.getElementById('likeBtn');
+const undoBtn = document.getElementById('undoBtn');
+
+let voter = null;
+let position = 0;
+let votes = {};
+let history = [];
+
+nameInput.addEventListener('input', () => {
+  startBtn.disabled = nameInput.value.trim().length === 0;
+});
+nameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !startBtn.disabled) startBtn.click();
+});
+
+startBtn.addEventListener('click', () => {
+  voter = nameInput.value.trim();
+  loadProgress();
+  nameGate.style.display = 'none';
+  app.style.display = 'flex';
+  voterLabel.textContent = voter;
+  renderCard();
+});
+
+function storageKey(suffix) {
+  return `swipe_${voter}_${suffix}`;
+}
+
+function loadProgress() {
+  try {
+    votes = JSON.parse(localStorage.getItem(storageKey('votes')) || '{}');
+    position = parseInt(localStorage.getItem(storageKey('position')) || '0', 10);
+  } catch (e) {
+    votes = {};
+    position = 0;
+  }
+  if (position > DECK.length) position = DECK.length;
+}
+
+function saveProgress() {
+  localStorage.setItem(storageKey('votes'), JSON.stringify(votes));
+  localStorage.setItem(storageKey('position'), String(position));
+}
+
+function sendVote(idx, choice) {
+  fetch('/api/vote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ voter, idx, choice }),
+  }).catch(() => {});
+}
+
+function renderCard() {
+  if (position >= DECK.length) {
+    showDone();
+    return;
+  }
+  const item = DECK[position];
+  card.style.transition = 'none';
+  card.style.transform = 'translateX(0) rotate(0)';
+  card.style.opacity = '1';
+  likeBadge.style.opacity = '0';
+  passBadge.style.opacity = '0';
+  cardImg.src = IMAGE_BASE + item.idx + '.jpg';
+  progressLabel.textContent = `${position + 1} / ${DECK.length}`;
+  undoBtn.disabled = history.length === 0;
+}
+
+function showDone() {
+  app.style.display = 'none';
+  doneScreen.style.display = 'flex';
+  const likes = Object.values(votes).filter(v => v === 'like').length;
+  const passes = Object.values(votes).filter(v => v === 'pass').length;
+  document.getElementById('doneStats').textContent = `${likes} אהבתם, ${passes} דילגתם, מתוך ${DECK.length} תמונות.`;
+}
+
+function commitVote(choice) {
+  const item = DECK[position];
+  votes[item.idx] = choice;
+  history.push(item.idx);
+  sendVote(item.idx, choice);
+  position++;
+  saveProgress();
+}
+
+function animateAway(direction, choice) {
+  const distance = window.innerWidth * 1.2;
+  card.style.transition = 'transform .32s ease, opacity .32s ease';
+  card.style.transform = `translateX(${direction * distance}px) rotate(${direction * 18}deg)`;
+  card.style.opacity = '0';
+  commitVote(choice);
+  setTimeout(renderCard, 320);
+}
+
+passBtn.addEventListener('click', () => animateAway(-1, 'pass'));
+likeBtn.addEventListener('click', () => animateAway(1, 'like'));
+
+undoBtn.addEventListener('click', () => {
+  if (!history.length) return;
+  const lastIdx = history.pop();
+  delete votes[lastIdx];
+  position--;
+  saveProgress();
+  renderCard();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (app.style.display !== 'flex') return;
+  if (e.key === 'ArrowRight') animateAway(1, 'like');
+  else if (e.key === 'ArrowLeft') animateAway(-1, 'pass');
+  else if (e.key === 'Backspace') undoBtn.click();
+});
+
+// ---------- Drag (pointer events cover mouse + touch) ----------
+let dragging = false;
+let startX = 0;
+let dx = 0;
+const SWIPE_THRESHOLD = 110;
+
+card.addEventListener('pointerdown', (e) => {
+  dragging = true;
+  startX = e.clientX;
+  card.setPointerCapture(e.pointerId);
+  card.style.transition = 'none';
+  card.style.cursor = 'grabbing';
+});
+
+card.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  dx = e.clientX - startX;
+  const rotate = dx / 18;
+  card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
+  const ratio = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
+  if (dx > 0) {
+    likeBadge.style.opacity = String(ratio);
+    passBadge.style.opacity = '0';
+  } else {
+    passBadge.style.opacity = String(ratio);
+    likeBadge.style.opacity = '0';
+  }
+});
+
+function endDrag() {
+  if (!dragging) return;
+  dragging = false;
+  card.style.cursor = 'grab';
+  if (Math.abs(dx) > SWIPE_THRESHOLD) {
+    animateAway(dx > 0 ? 1 : -1, dx > 0 ? 'like' : 'pass');
+  } else {
+    card.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)';
+    card.style.transform = 'translateX(0) rotate(0)';
+    likeBadge.style.opacity = '0';
+    passBadge.style.opacity = '0';
+  }
+  dx = 0;
+}
+card.addEventListener('pointerup', endDrag);
+card.addEventListener('pointercancel', endDrag);
+</script>
+</body>
+</html>
